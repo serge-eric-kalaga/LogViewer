@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="description" content="Visualiseur de Logs en Temps Réel">
+    <!-- favicon -->
+    <link rel="icon" href="https://img.icons8.com/?size=100&id=ZvZUJWw0eD5p&format=png&color=000000"
+        type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <title>Visualiseur de Logs en Temps Réel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #282c34;
+            color: #61dafb;
+            padding: 20px;
+        }
+
+        pre {
+            background-color: #21252b;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            white-space: pre-wrap;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .info {
+            color: orange;
+        }
+
+        .warn {
+            color: orange;
+        }
+
+        .highlight {
+            background-color: yellow;
+            color: black;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #61dafb;
+            color: #282c34;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #21a1f1;
+        }
+
+        #result-count {
+            margin: 10px 0;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            margin: 10px 5px;
+            border: 1px solid #61dafb;
+            border-radius: 5px;
+            background-color: #333;
+            color: #61dafb;
+        }
+
+        input[type="date"] {
+            padding: 10px;
+            margin: 10px 5px;
+            border: 1px solid #61dafb;
+            border-radius: 5px;
+            background-color: #333;
+            /* Fond sombre */
+            color: #61dafb;
+            /* Texte bleu clair */
+            font-size: 16px;
+            outline: none;
+            /* Supprime le contour par défaut */
+            transition: all 0.3s ease;
+            /* Animation pour le survol */
+            width: 200px;
+        }
+
+        input[type="date"]:hover {
+            background-color: #444;
+            /* Fond légèrement plus clair au survol */
+            border-color: #21a1f1;
+            /* Couleur de bordure plus vive */
+        }
+
+        input[type="date"]:focus {
+            background-color: #21252b;
+            /* Fond différent lors de la sélection */
+            border-color: #21a1f1;
+            color: #ffffff;
+            box-shadow: 0 0 5px #21a1f1;
+            /* Effet lumineux */
+        }
+
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #61dafb;
+            /* Couleur de texte */
+            background-color: #333;
+            /* Couleur de fond */
+            border: 2px solid #61dafb;
+            /* Bordure principale */
+            border-radius: 5px;
+            /* Coins arrondis */
+            transition: all 0.3s ease;
+            /* Animation fluide */
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            /* Supprime l'apparence par défaut */
+            -webkit-appearance: none;
+            /* Support pour Safari */
+            -moz-appearance: none;
+            /* Support pour Firefox */
+        }
+
+        select:hover {
+            background-color: #444;
+            /* Fond plus clair au survol */
+            border-color: #21a1f1;
+            /* Couleur de bordure au survol */
+        }
+
+        select:focus {
+            box-shadow: 0 0 5px #21a1f1;
+            /* Effet lumineux */
+            background-color: #21252b;
+            /* Fond plus sombre */
+            color: #ffffff;
+            /* Texte plus lumineux */
+        }
+
+        select option {
+            background-color: #21252b;
+            /* Fond des options */
+            color: #61dafb;
+            /* Couleur des options */
+        }
+
+        /* Ajouter un symbole pour indiquer le dropdown */
+        select:after {
+            content: '\25BC';
+            /* Symbole de flèche vers le bas */
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #61dafb;
+            pointer-events: none;
+        }
+
+
+
+
+        .ligne_log {
+            display: flex;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            /* border-left: 3px solid #007acc;  Blue line on left, like VSCode */
+
+            /* Dark background for the code block */
+        }
+
+        .ligne_log.active {
+            border-left: 3px solid #007acc;
+            background-color: #3a3a3a;
+            /* Darker background on active */
+        }
+
+        .ligne_log:active {
+            border-left: 3px solid #007acc;
+            display: flex;
+            /* border-left: 3px solid #007acc;  Blue line on left, like VSCode */
+
+            background-color: #2d2d2d;
+            /* Dark background for the code block */
+        }
+
+        .ligne_number {
+            color: #858585;
+            margin-right: 10px;
+            padding-right: 10px;
+            text-align: right;
+        }
+
+        .ligne_log:hover {
+            background-color: #3a3a3a;
+            /* Hover effect */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>API Logs en Temps Réel</h1>
+    <div>
+        <input type="text" id="search-input" placeholder="Rechercher un élément..." />
+        <input list="file-options" type="text" id="file-search" placeholder="-- Sélectionner un fichier --" />
+        <datalist id="file-options">
+            {% for file in log_files %}
+            <option value="{{ file }}">{{ file }}</option>
+            {% endfor %}
+        </datalist>
+
+        <button id="search-button">Rechercher</button>
+        <button id="prev-button" disabled>Précédent</button>
+        <button id="next-button" disabled>Suivant</button>
+        <button id="up-button"><i class="bi bi-arrow-up"></i></button>
+        <button id="down-button"><i class="bi bi-arrow-down"></i></button>
+        <button id="reload-button"><i class="bi bi-arrow-clockwise"></i></button>
+        <select name="numberligne" id="number-ligne">
+            <option value="10">10</option>
+            <option value="100" selected>100</option>
+            <option value="1000">1000</option>
+            <option value="1000">10000</option>
+            <option value="1000">100000</option>
+        </select>
+        <input type="date" name="date" id="date">
+        <button id="downloadBtn">Télécharger</button>
+        <label><input type="checkbox" id="autoReload"> Rafraîchissement auto</label>
+    </div>
+    <div id="log-content">
+        <pre id="logs">
+            <div class="spinner-border text-primary mt-3" role="status">
+                <span class="sr-only"></span>
+            </div>
+        </pre>
+    </div>
+    <script>
+        let logFilePath = {{ log_files | tojson | safe }}; // Chemin vers le fichier de logs
+
+        if (logFilePath.length > 0) {
+            logFilePath = `/app/${logFilePath[0]}`; // Utiliser le premier fichier de logs par défaut
+        } else {
+            logFilePath = '/app/logs/app.log'; // Chemin par défaut si aucun fichier n'est sélectionné
+        }
+
+        const logElement = document.getElementById('logs');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const upButton = document.getElementById('up-button');
+        const downButton = document.getElementById('down-button');
+        const logDateInput = document.getElementById('date');
+        const reloadButton = document.getElementById('reload-button');
+        const numberLigne = document.getElementById('number-ligne');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        let searchResults = [];
+        let currentResultIndex = -1;
+        let alreadyLoaded = false;
+        let numberLignes_ = 100;
+        let autoReloadInterval = null;
+
+        function updateLogFilePath() {
+            var selectedDate = logDateInput.value; // Obtenir la date choisie
+
+            logFilePath = '../logs/app.log'; // Chemin par défaut
+            // Par défaut, on utilise app.log pour les logs d'application
+            // logFilePath = selectedDate
+            //    ? `app.log.${selectedDate.replace(/-/g, '-')}` // Formatage du fichier log avec la date
+            //    : 'app.log'; // Fichier par défaut
+        }
+
+
+        function fetchLogs(numberLignes = numberLignes_) {
+            var myHeaders = new Headers();
+            myHeaders.append('pragma', 'no-cache');
+            myHeaders.append('cache-control', 'no-cache');
+
+            var myInit = {
+                method: 'GET',
+                headers: myHeaders,
+            };
+            fetch(logFilePath)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Fichier de log indisponible pour le : ${logDateInput.value}`);
+                    }
+                    return response.text();
+                })
+                .then((data) => {
+                    const allLogs = data.split('\n');
+                    const last1000Logs = allLogs.slice(-numberLignes); // Prendre les 1000 dernières lignes
+                    const logs = last1000Logs
+                        .map((line, index) => {
+                            // Ajouter le numéro de ligne avant chaque ligne
+                            const lineNumber = (allLogs.length - numberLignes) + index;
+                            const coloredLine = line
+                                .replace(/ERROR/g, '<span class="error">ERROR</span>')
+                                .replace(/WARNING/g, '<span class="warn">WARNING</span>')
+                                .replace(/INFO/g, '<span class="info">INFO</span>');
+                            //return `<span class="line-number">${lineNumber}</span> - ${coloredLine}`;
+
+                            return `<div class="ligne_log" onclick="toggleActive(this)">
+                                <div class="ligne_number">${lineNumber}</div>
+                                <div class="log_text"> ${coloredLine} </div>
+                            </div>`;
+                        })
+                        .join('\n');
+
+                    logElement.innerHTML = highlightSearchResults(logs);
+
+                    if (searchResults.length === 0 && !alreadyLoaded) {
+                        goToLastLine();
+                        alreadyLoaded = true;
+                    }
+                    updateNavigationButtons();
+                })
+                .catch((err) => {
+                    logElement.innerHTML = `<span class="error">${err.message}</span>`;
+                    /// console.error(err);
+                });
+        }
+
+        function highlightSearchResults(logs) {
+            if (searchResults.length === 0) return logs;
+
+            // Remplacer le texte par un span.highlight pour le résultat courant seulement
+            const highlightedLogs = logs.split('\n').map((line, index) => {
+                if (index === searchResults[currentResultIndex]) {
+                    return `<span class="highlight">${line}</span>`;
+                }
+                return line;
+            });
+
+            return highlightedLogs.join('\n');
+        }
+
+        function searchLogs() {
+            const query = searchInput.value.trim();
+            if (query === '') {
+                searchResults = [];
+                currentResultIndex = -1;
+                updateNavigationButtons();
+                return;
+            }
+
+            // Rechercher les lignes correspondant à la requête
+            const logLines = logElement.innerHTML.split('\n');
+            searchResults = logLines.map((line, index) => (line.includes(query) ? index : -1)).filter(index => index !== -1);
+
+            // Réinitialiser la recherche
+            currentResultIndex = -1; // Commence avant le premier résultat
+            goToNextResult(); // Va à la première correspondance
+        }
+
+        function goToNextResult() {
+            if (searchResults.length === 0) return;
+
+            currentResultIndex = (currentResultIndex + 1) % searchResults.length;
+            highlightCurrentResult();
+        }
+
+        function goToPrevResult() {
+            if (searchResults.length === 0) return;
+
+            currentResultIndex = (currentResultIndex - 1 + searchResults.length) % searchResults.length;
+            highlightCurrentResult();
+        }
+
+        function highlightCurrentResult() {
+            const logLines = logElement.innerHTML.split('\n').map((line, index) => {
+                if (index === searchResults[currentResultIndex]) {
+                    return `<span class="highlight">${line}</span>`;
+                }
+                return line;
+            });
+
+            logElement.innerHTML = logLines.join('\n');
+
+            // Défilement vers la ligne courante
+            const logChildren = logElement.querySelectorAll('.highlight');
+            if (logChildren.length > 0) {
+                const currentHighlighted = logChildren[0]; // Le premier élément avec la classe 'highlight'
+                currentHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            updateNavigationButtons();
+        }
+
+        function updateNavigationButtons() {
+            prevButton.disabled = currentResultIndex <= 0;
+            nextButton.disabled = currentResultIndex >= searchResults.length - 1;
+        }
+
+        function goToFirstLine() {
+
+            logElement.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function goToLastLine() {
+            logElement.scrollTo({
+                top: logElement.scrollHeight,
+                behavior: 'smooth'
+
+            });
+        }
+
+
+        downloadBtn.addEventListener('click', function () {
+            // Logic to download the log file
+            const link = document.createElement('a');
+            link.href = logFilePath; // Use the current log file path
+            link.download = `logs.${logFilePath.split('.').pop()}`; // Set the default file name
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        searchButton.addEventListener('click', searchLogs);
+        prevButton.addEventListener('click', goToPrevResult);
+        nextButton.addEventListener('click', goToNextResult);
+        upButton.addEventListener('click', goToFirstLine);
+        downButton.addEventListener('click', goToLastLine);
+
+
+        searchInput.addEventListener('change', (event) => {
+            console.log(event.target.value);
+
+            searchLogs();
+            goToNextResult();
+        });
+        searchInput.addEventListener('keydown', (event) => {
+
+            if (event.key === 'Enter') {
+                goToNextResult();
+            }
+        })
+
+        logDateInput.addEventListener('change', () => {
+            /// print(logDateInput.value);
+            logElement.innerHTML = `<div class="spinner-border text-primary" role="status">
+                <span class="sr-only"></span>
+            </div>`;
+            updateLogFilePath();
+            fetchLogs();
+
+            goToLastLine();
+        });
+
+
+        reloadButton.addEventListener('click', () => {
+            logElement.innerHTML = `<div class="spinner-border text-primary" role="status">
+                <span class="sr-only"></span>
+            </div>`;
+            fetchLogs();
+            goToLastLine();
+        });
+
+        numberLigne.addEventListener('change', (event) => {
+            numberLignes = event.target.value;
+            numberLignes_ = numberLignes;
+            logElement.innerHTML = `<div class="spinner-border text-primary" role="status">
+                <span class="sr-only"></span>`
+            fetchLogs(numberLignes);
+            goToLastLine();
+        });
+
+
+        function toggleActive(element) {
+            element.classList.toggle("active");
+        }
+
+        document.getElementById('autoReload').addEventListener('change', function () {
+            if (this.checked) {
+                autoReloadInterval = setInterval(() => fetchLogs(), 1000); // 1 seconde
+            } else {
+                clearInterval(autoReloadInterval);
+            }
+        });
+
+        // setInterval(fetchLogs, 500);
+        fetchLogs();
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+
+
+</body>
+
+</html>

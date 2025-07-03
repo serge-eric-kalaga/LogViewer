@@ -1,0 +1,14 @@
+services:
+
+  log_viewer:
+    container_name: log_viewer
+    build: ./app
+    restart: always
+    ports:
+      - "7777:80"
+    volumes:
+    - ./app:/app # Mounting your application directory
+    # - ./app/logs:/logs # Mounting your logs directory
+    environment:
+      - LOGS_EXTENSIONS=${LOGS_EXTENSIONS:-.log,.txt} # Default extensions if not set
+      - LOGS_DIRECTORY=${LOGS_DIRECTORY:-/logs} # Default directory if not set
