@@ -46,6 +46,8 @@
         .highlight {
             background-color: yellow;
             color: black;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         button {
@@ -207,6 +209,10 @@
             background-color: #3a3a3a;
             /* Hover effect */
         }
+
+        .log_text {
+            margin: 0;
+        }
     </style>
 </head>
 
@@ -265,6 +271,7 @@
         const reloadButton = document.getElementById('reload-button');
         const numberLigne = document.getElementById('number-ligne');
         const downloadBtn = document.getElementById('downloadBtn');
+        const fileSearchInput = document.getElementById('file-search');
 
         let searchResults = [];
         let currentResultIndex = -1;
@@ -372,6 +379,30 @@
             highlightCurrentResult();
         }
 
+
+        fileSearchInput.addEventListener('input', function () {
+            // Logic to filter log files based on input
+            const query = fileSearchInput.value.toLowerCase();
+            const options = document.querySelectorAll('#file-options option');
+            options.forEach(option => {
+                option.style.display = option.value.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+        });
+
+        fileSearchInput.addEventListener('change', function () {
+            // Logic to change the log file path based on selected file
+            const selectedFile = fileSearchInput.value;
+            if (selectedFile) {
+                logFilePath = `/app/${selectedFile}`; // Update the log file path
+                logElement.innerHTML = `<div class="spinner-border text-primary" role="status">
+                    <span class="sr-only"></span>
+                </div>`;
+                fetchLogs();
+                goToLastLine();
+            }
+        });
+
+
         function goToPrevResult() {
             if (searchResults.length === 0) return;
 
@@ -446,10 +477,19 @@
         });
         searchInput.addEventListener('keydown', (event) => {
 
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && searchInput.value.trim() !== '') {
                 goToNextResult();
             }
-        })
+            // Reinitialiser en retirant la classe "highlight" si la recherche est vide
+            if (searchInput.value.trim() === '') {
+                searchResults = [];
+                currentResultIndex = -1;
+
+                logElement.innerHTML = logElement.innerHTML.replace(/<span class="highlight">|<\/span>/g, '');
+                updateNavigationButtons();
+                goToLastLine();
+            }
+        });
 
         logDateInput.addEventListener('change', () => {
             /// print(logDateInput.value);
@@ -487,7 +527,7 @@
 
         document.getElementById('autoReload').addEventListener('change', function () {
             if (this.checked) {
-                autoReloadInterval = setInterval(() => fetchLogs(), 1000); // 1 seconde
+                autoReloadInterval = setInterval(() => fetchLogs(), 100); // 1 seconde
             } else {
                 clearInterval(autoReloadInterval);
             }

@@ -10,4 +10,6 @@ wheels/
 .venv
 venv/
 
+# TOus les les fichiers de log sauf app.log
 *.log
+!app.log
