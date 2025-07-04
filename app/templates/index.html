@@ -290,55 +290,72 @@
         }
 
 
-        function fetchLogs(numberLignes = numberLignes_) {
-            var myHeaders = new Headers();
-            myHeaders.append('pragma', 'no-cache');
-            myHeaders.append('cache-control', 'no-cache');
+        async function fetchLogs(numberLignes = numberLignes_) {
+            logElement.innerHTML = ''; // Vider l'affichage précédent
 
-            var myInit = {
-                method: 'GET',
-                headers: myHeaders,
+            const response = await fetch(`/stream?file=${encodeURIComponent(logFilePath.replace('/app/', ''))}&lines=${numberLignes}`, {
+                headers: {
+                    'cache-control': 'no-cache',
+                    'pragma': 'no-cache',
+                },
+            });
+
+            if (!response.ok) {
+                logElement.innerHTML = `<span class="error">Erreur : Impossible de lire les logs</span>`;
+                return;
+            }
+
+            const decoder = new TextDecoder('utf-8');
+            const reader = response.body.getReader();
+            let partial = '';
+            let logLines = [];
+
+            const processChunk = (chunk) => {
+                partial += chunk;
+                let lines = partial.split('\n');
+                partial = lines.pop(); // ligne incomplète
+
+                for (const line of lines) {
+                    logLines.push(line);
+                    if (logLines.length > numberLignes) {
+                        logLines.shift(); // retirer la plus vieille ligne
+                    }
+
+                    const lineNumber = logLines.length;
+                    const coloredLine = line
+                        .replace(/ERROR/g, '<span class="error">ERROR</span>')
+                        .replace(/WARNING/g, '<span class="warn">WARNING</span>')
+                        .replace(/INFO/g, '<span class="info">INFO</span>');
+
+                    const div = document.createElement('div');
+                    div.className = 'ligne_log';
+                    div.setAttribute('onclick', 'toggleActive(this)');
+                    div.innerHTML = `<div class="ligne_number">${lineNumber}</div><div class="log_text">${coloredLine}</div>`;
+
+                    logElement.appendChild(div);
+                    logElement.scrollTop = logElement.scrollHeight; // Scroll en bas à chaque ligne reçue
+                }
             };
-            fetch(logFilePath)
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`Fichier de log indisponible pour le : ${logDateInput.value}`);
-                    }
-                    return response.text();
-                })
-                .then((data) => {
-                    const allLogs = data.split('\n');
-                    const last1000Logs = allLogs.slice(-numberLignes); // Prendre les 1000 dernières lignes
-                    const logs = last1000Logs
-                        .map((line, index) => {
-                            // Ajouter le numéro de ligne avant chaque ligne
-                            const lineNumber = (allLogs.length - numberLignes) + index;
-                            const coloredLine = line
-                                .replace(/ERROR/g, '<span class="error">ERROR</span>')
-                                .replace(/WARNING/g, '<span class="warn">WARNING</span>')
-                                .replace(/INFO/g, '<span class="info">INFO</span>');
-                            //return `<span class="line-number">${lineNumber}</span> - ${coloredLine}`;
 
-                            return `<div class="ligne_log" onclick="toggleActive(this)">
-                                <div class="ligne_number">${lineNumber}</div>
-                                <div class="log_text"> ${coloredLine} </div>
-                            </div>`;
-                        })
-                        .join('\n');
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
 
-                    logElement.innerHTML = highlightSearchResults(logs);
+                const chunk = decoder.decode(value, { stream: true });
+                processChunk(chunk);
+            }
 
-                    if (searchResults.length === 0 && !alreadyLoaded) {
-                        goToLastLine();
-                        alreadyLoaded = true;
-                    }
-                    updateNavigationButtons();
-                })
-                .catch((err) => {
-                    logElement.innerHTML = `<span class="error">${err.message}</span>`;
-                    /// console.error(err);
-                });
+            if (partial) {
+                processChunk(partial);
+            }
+
+            updateNavigationButtons();
+            alreadyLoaded = true;
         }
+
+
+
+
 
         function highlightSearchResults(logs) {
             if (searchResults.length === 0) return logs;
